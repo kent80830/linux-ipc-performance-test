@@ -9,22 +9,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/msg.h>
+#include <sys/time.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <time.h>
 
-#define LOG_INFO(fmt, ...) \
-    do { fprintf(stdout, "[INFO] " fmt "\n", ##__VA_ARGS__); } while(0)
-
-#define LOG_ERROR(fmt, ...) \
-    do { fprintf(stderr, "[ERROR] %s:%d " fmt "\n", \
-                 __FILE__, __LINE__, ##__VA_ARGS__); } while(0)
-
-#define CHECK_RET(expr, msg) \
-    do { if ((expr) == -1) { perror(msg); exit(EXIT_FAILURE); } } while(0)
+#define LOG_INFO(fmt, ...) printf("[INFO] " fmt "\n", ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
 
 #define FIFO_PATH_RD "./fifo_rd"
 #define FIFO_PATH_WR "./fifo_wr"
-
 #define MSGQ_KEY 0x1234
 
 typedef enum {
@@ -39,18 +34,5 @@ typedef struct {
     double total_time_us;
     int success_count;
 } perf_data_t;
-
-typedef struct ipc_handle {
-    ipc_type_t type;
-    void *impl;
-    int (*init_server)(struct ipc_handle *handle);
-    int (*init_client)(struct ipc_handle *handle);
-    int (*send)(struct ipc_handle *handle, const void *data, size_t len);
-    int (*recv)(struct ipc_handle *handle, void *buf, size_t len);
-    int (*close)(struct ipc_handle *handle);
-} ipc_handle_t;
-
-ipc_handle_t* ipc_create(ipc_type_t type);
-void ipc_destroy(ipc_handle_t *handle);
 
 #endif
