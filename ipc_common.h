@@ -25,7 +25,7 @@
 #define IPC_TYPE_FIFO 0
 #define IPC_TYPE_MSGQ 1
 
-#define CURRENT_IPC_TYPE IPC_TYPE_FIFO
+#define CURRENT_IPC_TYPE IPC_TYPE_MSGQ   
 
 typedef struct {
     double avg_latency_us;
