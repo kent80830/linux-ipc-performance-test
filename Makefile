@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -O2 -g
 LDFLAGS = -lm
 
 TARGET = perf_test
-OBJS = perf_test.o fifo_impl.o msgq_impl.o
+OBJS = perf_test.o ipc_common.o fifo_impl.o msgq_impl.o
 
 all: $(TARGET)
 
