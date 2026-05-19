@@ -1,83 +1,80 @@
 #include "ipc_common.h"
 
-extern int fifo_init_server(ipc_handle_t*);
-extern int fifo_init_client(ipc_handle_t*);
-extern int fifo_send(ipc_handle_t*, const void*, size_t);
-extern int fifo_recv(ipc_handle_t*, void*, size_t);
-extern int fifo_close(ipc_handle_t*);
+extern void* fifo_server_init(void);
+extern void* fifo_client_init(void);
+extern int fifo_send(void *h, const void *data, size_t len);
+extern int fifo_recv(void *h, void *buf, size_t len);
+extern void fifo_close(void *h);
 
-extern int msgq_init_server(ipc_handle_t*);
-extern int msgq_init_client(ipc_handle_t*);
-extern int msgq_send(ipc_handle_t*, const void*, size_t);
-extern int msgq_recv(ipc_handle_t*, void*, size_t);
-extern int msgq_close(ipc_handle_t*);
+extern void* msgq_server_init(void);
+extern void* msgq_client_init(void);
+extern int msgq_send(void *h, long type, const void *data, size_t len);
+extern int msgq_recv(void *h, long type, void *buf, size_t len);
+extern void msgq_close(void *h, int is_server);
 
-typedef struct {
-    int fd_read;
-    int fd_write;
-    char *rd_path;
-    char *wr_path;
-    int is_server;
-} fifo_priv_t;
-
-typedef struct {
-    int msgqid;
-    pid_t peer_pid;
-    int is_server;
-} msgq_priv_t;
-
-ipc_handle_t* ipc_create(ipc_type_t type) {
-    ipc_handle_t *handle = (ipc_handle_t*)calloc(1, sizeof(ipc_handle_t));
-    if (!handle) {
-        LOG_ERROR("ipc_create: malloc handle failed");
+ipc_handle_t* ipc_server_init(int type) {
+    ipc_handle_t *h = malloc(sizeof(ipc_handle_t));
+    if (!h) return NULL;
+    
+    h->type = type;
+    
+    if (type == IPC_TYPE_FIFO) {
+        h->handle = fifo_server_init();
+    } else {
+        h->handle = msgq_server_init();
+    }
+    
+    if (!h->handle) {
+        free(h);
         return NULL;
     }
     
-    handle->type = type;
-    
-    switch (type) {
-    case IPC_TYPE_FIFO:
-        handle->impl = calloc(1, sizeof(fifo_priv_t));
-        if (!handle->impl) {
-            free(handle);
-            LOG_ERROR("ipc_create: malloc fifo_priv failed");
-            return NULL;
-        }
-        handle->init_server = fifo_init_server;
-        handle->init_client = fifo_init_client;
-        handle->send = fifo_send;
-        handle->recv = fifo_recv;
-        handle->close = fifo_close;
-        break;
-        
-    case IPC_TYPE_MSGQ:
-        handle->impl = calloc(1, sizeof(msgq_priv_t));
-        if (!handle->impl) {
-            free(handle);
-            LOG_ERROR("ipc_create: malloc msgq_priv failed");
-            return NULL;
-        }
-        handle->init_server = msgq_init_server;
-        handle->init_client = msgq_init_client;
-        handle->send = msgq_send;
-        handle->recv = msgq_recv;
-        handle->close = msgq_close;
-        break;
-        
-    default:
-        LOG_ERROR("Unknown IPC type: %d", type);
-        free(handle);
-        return NULL;
-    }
-    
-    return handle;
+    return h;
 }
 
-void ipc_destroy(ipc_handle_t *handle) {
-    if (handle) {
-        if (handle->close) {
-            handle->close(handle);
+ipc_handle_t* ipc_client_init(int type) {
+    ipc_handle_t *h = malloc(sizeof(ipc_handle_t));
+    if (!h) return NULL;
+    
+    h->type = type;
+    
+    if (type == IPC_TYPE_FIFO) {
+        h->handle = fifo_client_init();
+    } else {
+        h->handle = msgq_client_init();
+    }
+    
+    if (!h->handle) {
+        free(h);
+        return NULL;
+    }
+    
+    return h;
+}
+
+int ipc_send(ipc_handle_t *h, const void *data, size_t len) {
+    if (h->type == IPC_TYPE_FIFO) {
+        return fifo_send(h->handle, data, len);
+    } else {
+        return msgq_send(h->handle, 1, data, len);
+    }
+}
+
+int ipc_recv(ipc_handle_t *h, void *buf, size_t len) {
+    if (h->type == IPC_TYPE_FIFO) {
+        return fifo_recv(h->handle, buf, len);
+    } else {
+        return msgq_recv(h->handle, 1, buf, len);
+    }
+}
+
+void ipc_close(ipc_handle_t *h, int is_server) {
+    if (h) {
+        if (h->type == IPC_TYPE_FIFO) {
+            fifo_close(h->handle);
+        } else {
+            msgq_close(h->handle, is_server);
         }
-        free(handle);
+        free(h);
     }
 }
